@@ -41,8 +41,10 @@ class GenericDecoder {
 
 		bool getParam(const std::string& name, std::string& value) const;
 		bool getParam(const std::string& name, int& value) const;
+		bool getParam(const std::string& name, double& value) const;
 		bool getParam(const std::string& name, unsigned  int& value) const;
 		bool getParam(const std::string& name, std::vector<uint32_t>& value) const;
+		bool getParam(const std::string& name, std::vector<double>& value) const;
 
 	protected:
 		bool loadConfiguration(XmlRpc::XmlRpcValue& config);

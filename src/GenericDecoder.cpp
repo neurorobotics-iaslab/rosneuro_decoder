@@ -122,6 +122,19 @@ namespace rosneuro {
 			return true;
 		}
 
+		bool GenericDecoder::getParam(const std::string& name, double& value) const {
+			auto it = this->params_.find(name);
+			if (it == this->params_.end())
+				return false;
+
+			if(it->second.getType() != XmlRpc::XmlRpcValue::TypeDouble)
+				return false;
+
+			auto tmp = it->second;
+			value = (double) tmp;
+			return true;
+		}
+
 		bool GenericDecoder::getParam(const std::string& name, unsigned int& value) const {
 			int signed_value;
 			if (!this->getParam(name, signed_value))
@@ -150,6 +163,31 @@ namespace rosneuro {
 				}
 
 				uint32_t double_value = double_array[i].getType() == XmlRpc::XmlRpcValue::TypeInt ? (int)(double_array[i]) : (int)(double_array[i]);
+				value.push_back(double_value);
+			}
+
+			return true;
+		}
+
+		bool GenericDecoder::getParam(const std::string& name, std::vector<double>& value) const {
+			auto it = this->params_.find(name);
+			if (it == this->params_.end())
+				return false;
+
+			value.clear();
+
+			if(it->second.getType() != XmlRpc::XmlRpcValue::TypeArray)
+				return false;
+
+			XmlRpc::XmlRpcValue double_array = it->second;
+
+			for (auto i = 0; i < double_array.size(); ++i){
+				if(double_array[i].getType() != XmlRpc::XmlRpcValue::TypeDouble && double_array[i].getType() != XmlRpc::XmlRpcValue::TypeInt) {
+
+			    return false;
+				}
+
+				double double_value = double_array[i].getType() == XmlRpc::XmlRpcValue::TypeInt ? (double) (double_array[i]) : (double)(double_array[i]);
 				value.push_back(double_value);
 			}
 
