@@ -27,7 +27,10 @@ Eigen::VectorXf probabilities = decoder->apply(features);
 ```
 while in the launch file, you need to specify the plugin. For instance, we use a Qda classifier in the test_qda.cpp file:
 ```
-<arg name="plugin" default='rosneuro::decoder::Qda'/>
+<?xml version="1.0"?>
+<launch>
+
+	<arg name="plugin" default='rosneuro::decoder::Qda'/>
 	<arg name="cfg_name" default='QdaCfg'/>
 	
     <rosparam command="load" file="$(find rosneuro_decoder_qda)/test/qdaCfg.yaml"/>
@@ -36,4 +39,6 @@ while in the launch file, you need to specify the plugin. For instance, we use a
         <param name="cfg_name" 	  value="$(arg cfg_name)"/>
         
 	</node>
+		
+</launch>
 ```
