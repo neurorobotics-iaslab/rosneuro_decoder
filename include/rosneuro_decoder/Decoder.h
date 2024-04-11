@@ -6,7 +6,7 @@
 #include <ros/ros.h>
 #include <std_srvs/Empty.h>
 #include <pluginlib/class_loader.h>
-
+#include <gtest/gtest_prod.h>
 #include <rosneuro_msgs/NeuroOutput.h>
 #include "rosneuro_decoder/GenericDecoder.h"
 
@@ -55,7 +55,14 @@ class Decoder {
 		boost::shared_ptr<GenericDecoder> 	decoder_;
 
 		std::unique_ptr<pluginlib::ClassLoader<GenericDecoder>> loader_;
-
+        FRIEND_TEST(TestDecoderSuite, Constructor);
+        FRIEND_TEST(TestDecoderSuite, Path);
+        FRIEND_TEST(TestDecoderSuite, WrongPath);
+        FRIEND_TEST(TestDecoderSuite, Name);
+        FRIEND_TEST(TestDecoderSuite, Classes);
+        FRIEND_TEST(TestDecoderSuite, SetMessage);
+        FRIEND_TEST(TestDecoderSuite, VectorToEigen);
+        FRIEND_TEST(TestDecoderSuite, EigenToVector);
 };
 
 	}

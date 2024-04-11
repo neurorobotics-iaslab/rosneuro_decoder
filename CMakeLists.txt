@@ -15,13 +15,14 @@ find_package(catkin REQUIRED COMPONENTS
 			 rosneuro_msgs)
 
 find_package(Eigen3 REQUIRED)
-
+find_package(GTest REQUIRED)
 SET(CMAKE_BUILD_TYPE RelWithDebInfo)
 
 
 ##############################################################################
 # Define package
 ##############################################################################
+
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES 
@@ -35,13 +36,26 @@ catkin_package(
   DEPENDS
 )
 
-###########
-## Build ##
-###########
+##############################################################################
+# Test #
+##############################################################################
+
+catkin_add_gtest(TestDecoder test/TestDecoder.cpp)
+target_link_libraries(TestDecoder ${GTEST_BOTH_LIBRARIES} pthread gmock)
+target_link_libraries(TestDecoder ${PROJECT_NAME} ${catkin_LIBRARIES})
+
+catkin_add_gtest(TestGenericDecoder test/TestGenericDecoder.cpp)
+target_link_libraries(TestGenericDecoder ${GTEST_BOTH_LIBRARIES} pthread gmock)
+target_link_libraries(TestGenericDecoder ${PROJECT_NAME} ${catkin_LIBRARIES})
+
+##############################################################################
+# Build #
+##############################################################################
 
 include_directories(${catkin_INCLUDE_DIRS} 
                     ${EIGEN3_INCLUDE_DIRS}
-					include)
+					include
+					include/${PROJECT_NAME})
 
 add_definitions(${EIGEN3_DEFINITIONS})
 
