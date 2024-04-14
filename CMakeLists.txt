@@ -69,6 +69,6 @@ add_dependencies(${PROJECT_NAME}
 				 ${catkin_EXPORTED_TARGETS}
 )
 
-add_executable(decoder src/decoder.cpp)
+add_executable(decoder example/run.cpp)
 target_link_libraries(decoder ${PROJECT_NAME} ${catkin_LIBRARIES}) 
 

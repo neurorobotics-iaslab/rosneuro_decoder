@@ -10,11 +10,11 @@ namespace rosneuro {
 
 		GenericDecoder::~GenericDecoder(void) {}
 
-		std::string GenericDecoder::name(void) {
+		std::string GenericDecoder::getName(void) {
 			return this->name_;
 		}
 
-		void GenericDecoder::setname(const std::string& name) {
+		void GenericDecoder::setName(const std::string& name) {
 			this->name_ = name;
 		}
 
@@ -23,16 +23,12 @@ namespace rosneuro {
 		}
 
 		bool GenericDecoder::configure(const std::string& param_name) {
-			
-			bool retval = false;
 			XmlRpc::XmlRpcValue config;
 			if (!this->nh_.getParam(param_name, config)) {
 		  		ROS_ERROR("Could not find parameter %s on the server, are you sure that it was pushed up correctly?", param_name.c_str());
 				return false;
 			}
-		
-			retval = this->configure(config);
-			return retval;
+            return this->configure(config);
 		}
 		
 		bool GenericDecoder::configure(XmlRpc::XmlRpcValue& config) {
@@ -49,7 +45,6 @@ namespace rosneuro {
 		}
 		
 		bool GenericDecoder::loadConfiguration(XmlRpc::XmlRpcValue& config) {
-			
 			if(config.getType() != XmlRpc::XmlRpcValue::TypeStruct) {
 				ROS_ERROR("A Decoder configuration must be a map with fields name, type, and params");
 				return false;
@@ -59,38 +54,28 @@ namespace rosneuro {
 				return false;
 			}
 		
-			//check to see if we have parameters in our list
 			if(config.hasMember("params")) {
-			
-				//get the params map
 		  		XmlRpc::XmlRpcValue params = config["params"];
-		
 				if(params.getType() != XmlRpc::XmlRpcValue::TypeStruct) {
 		    		ROS_ERROR("params must be a map");
 					return false;
 				} else {
-				
-					//Load params into map
 		    		for(XmlRpc::XmlRpcValue::iterator it = params.begin(); it != params.end(); ++it) {
 		      			ROS_DEBUG("Loading param %s", it->first.c_str());
 		      			this->params_[it->first] = it->second;
 					}
 				}
 			}
-
-
 			return true;
 		}
 
 		bool GenericDecoder::setNameAndType(XmlRpc::XmlRpcValue& config) {
-
-			if(config.hasMember("name") == false) {
+			if(!config.hasMember("name")) {
 				ROS_ERROR("Decoder didn't have name defined, this is required");
 				return false;
 			}
-
 			this->name_ = std::string(config["name"]);
-			ROS_DEBUG("Configuring Decoder with name %s", this->name().c_str());
+			ROS_DEBUG("Configuring Decoder with name %s", this->getName().c_str());
 
 			return true;
 		}
@@ -130,8 +115,8 @@ namespace rosneuro {
 			if(it->second.getType() != XmlRpc::XmlRpcValue::TypeDouble)
 				return false;
 
-			auto tmp = it->second;
-			value = (double) tmp;
+			auto to_convert = it->second;
+			value = (double) to_convert;
 			return true;
 		}
 
@@ -194,72 +179,70 @@ namespace rosneuro {
 			return true;
 		}
 
-		// load vector of vector
-        bool GenericDecoder::load_vectorOfVector(const std::string current_str, std::vector<std::vector<uint32_t>>& out){
-            unsigned int nrows;
-            unsigned int ncols;
+        bool GenericDecoder::loadVectorOfVector(const std::string current_str, std::vector<std::vector<uint32_t>>& out){
+            return parseStringToMatrix(current_str, out);
+        }
 
+        template<typename T>
+        bool GenericDecoder::parseStringToMatrix(const std::string current_str, std::vector<std::vector<T>>& out){
             std::stringstream ss(current_str);
             std::string c_row;
 
             while(getline(ss, c_row, ';')){
                 std::stringstream iss(c_row);
-                int index;
-                std::vector<uint32_t> row;
+                T index;
+                std::vector<T> row;
                 while(iss >> index){
                     row.push_back(index);
                 }
                 out.push_back(row);
             }
+            return true;
+        }
+
+        bool GenericDecoder::loadEigen(const std::string current_str, Eigen::Ref<Eigen::MatrixXf> out){
+            std::vector<std::vector<float>> matrix;
+
+            if (!parseStringToMatrix(current_str, matrix)) {
+                return false;
+            }
+
+            if (!validateMatrixDimensions(matrix, out)) {
+                return false;
+            }
+
+            unsigned int n_rows = matrix.size();
+            unsigned int n_cols = matrix.at(0).size();
+            out = Eigen::MatrixXf::Zero(n_rows, n_cols);
+            populateEigenMatrix(matrix, out);
 
             return true;
         }
 
-		// load eigen matrix
-        bool GenericDecoder::load_eigen(const std::string current_str, Eigen::Ref<Eigen::MatrixXf> out){
-            unsigned int nrows;
-            unsigned int ncols;
-            std::vector<std::vector<float>> temp_matrix;
+        bool GenericDecoder::validateMatrixDimensions(const std::vector<std::vector<float>>& matrix, Eigen::Ref<Eigen::MatrixXf> out) {
+            unsigned int n_rows = matrix.size();
+            unsigned int n_cols = matrix.at(0).size();
 
-            std::stringstream ss(current_str);
-            std::string c_row;
-
-            while(getline(ss, c_row, ';')){
-                std::stringstream iss(c_row);
-                float index;
-                std::vector<float> row;
-                while(iss >> index){
-                    row.push_back(index);
-                }
-                temp_matrix.push_back(row);
-            }
-
-            nrows = temp_matrix.size();
-            ncols = temp_matrix.at(0).size();
-
-            // check if correct dimension with the provided data config
-            if(nrows != out.rows() || ncols != out.cols()){
+            if(n_rows != out.rows() || n_cols != out.cols()){
                 return false;
             }
 
-            // check if always same dimension in temp_matrix
-            for(auto it=temp_matrix.begin(); it != temp_matrix.end(); ++it){
-                if((*it).size() != ncols){
+            for(auto it=matrix.begin(); it != matrix.end(); ++it){
+                if((*it).size() != n_cols){
                     return false;
                 }
             }
 
-            out = Eigen::MatrixXf::Zero(nrows, ncols);
-
-            for(auto i = 0; i < out.rows(); i++){
-                for(auto j = 0; j < out.cols(); j++){
-                    out(i,j) = temp_matrix.at(i).at(j);
-                }
-            }
-
             return true;
         }
 
+        void GenericDecoder::populateEigenMatrix(const std::vector<std::vector<float>>& input, Eigen::Ref<Eigen::MatrixXf> output) {
+            for (size_t i = 0; i < input.size(); ++i) {
+                for (size_t j = 0; j < input[i].size(); ++j) {
+                    output(i, j) = input[i][j];
+                }
+            }
+        }
 	}
 
 }
