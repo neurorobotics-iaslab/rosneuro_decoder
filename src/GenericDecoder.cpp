@@ -2,7 +2,6 @@
 
 namespace rosneuro {
 	namespace decoder {
-
 		GenericDecoder::GenericDecoder(void) {
 			this->name_ = "undefined";
 			this->is_configured_ = false;
@@ -18,9 +17,13 @@ namespace rosneuro {
 			this->name_ = name;
 		}
 
-		bool GenericDecoder::isSet(void){
-			return this->is_configured_;
-		}
+        bool GenericDecoder::isSet(void){
+            if(!this->is_configured_){
+                ROS_ERROR("[%s] Decoder not configured", this->getName().c_str());
+                return false;
+            }
+            return this->is_configured_;
+        }
 
 		bool GenericDecoder::configure(const std::string& param_name) {
 			XmlRpc::XmlRpcValue config;
@@ -169,7 +172,7 @@ namespace rosneuro {
 			for (auto i = 0; i < double_array.size(); ++i){
 				if(double_array[i].getType() != XmlRpc::XmlRpcValue::TypeDouble && double_array[i].getType() != XmlRpc::XmlRpcValue::TypeInt) {
 
-			    return false;
+			        return false;
 				}
 
 				double double_value = double_array[i].getType() == XmlRpc::XmlRpcValue::TypeInt ? (double) (double_array[i]) : (double)(double_array[i]);
@@ -243,6 +246,29 @@ namespace rosneuro {
                 }
             }
         }
-	}
 
+        Eigen::VectorXf GenericDecoder::computeFeatures(const Eigen::MatrixXf& in, std::uint32_t n_features, std::vector<uint32_t> idchans,
+                                                        std::vector<std::vector<uint32_t>> freqs){
+            Eigen::VectorXf out(n_features);
+            this->isSet();
+
+            int count_feature = 0;
+            for(int it_chan = 0; it_chan < idchans.size(); it_chan++){
+                int id_chan = idchans.at(it_chan) - 1;
+                for(const auto& freq : freqs.at(it_chan)){
+                    out(count_feature) = in(id_chan, (int) freq/2.0);
+                    count_feature ++;
+                }
+            }
+            return out.transpose();
+        }
+        std::vector<int> GenericDecoder::defineClasses(std::vector<uint32_t> class_lbs){
+            this->isSet();
+            std::vector<int> classes_lbs;
+            for(int i = 0; i < class_lbs.size(); i++){
+                classes_lbs.push_back((int) class_lbs.at(i));
+            }
+            return classes_lbs;
+        }
+	}
 }

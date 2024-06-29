@@ -19,7 +19,7 @@ namespace rosneuro {
                 void setName(const std::string& name);
                 virtual std::string getPath(void) = 0;
                 virtual std::vector<int> getClasses(void) = 0;
-                virtual bool isSet(void);
+                bool isSet(void);
 
                 bool configure(const std::string& param_name);
                 bool configure(XmlRpc::XmlRpcValue& config);
