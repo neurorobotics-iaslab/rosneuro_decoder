@@ -5,7 +5,6 @@ namespace rosneuro{
         Decoder::Decoder(void) : p_nh_("~"){
             this->has_new_data_ = false;
             this->is_first_message_ = true;
-
             this->loader_.reset(new pluginlib::ClassLoader<GenericDecoder>("rosneuro_decoder", "rosneuro::decoder::GenericDecoder"));
         }
 
@@ -14,65 +13,54 @@ namespace rosneuro{
             this->loader_.reset();
         }
 
-        std::string Decoder::path(){
-            if(!this->decoder_->isSet()){
-                ROS_ERROR("[Decoder] not configured yet");
-                throw std::runtime_error("[Decoder] not configured yet");
-            }
-
-            return this->decoder_->path();
+        std::string Decoder::getPath(){
+            validateDecoderConfiguration();
+            return this->decoder_->getPath();
         }
 
-        std::string Decoder::name(){
-            if(!this->decoder_->isSet()){
-                ROS_ERROR("[Decoder] not configured yet");
-                throw std::runtime_error("[Decoder] not configured yet");
-            }
-
-            return this->decoder_->name();
+        std::string Decoder::getName(){
+            validateDecoderConfiguration();
+            return this->decoder_->getName();
         }
 
-        std::vector<int> Decoder::classes(){
+        std::vector<int> Decoder::getClasses(){
+            validateDecoderConfiguration();
+            return this->decoder_->getClasses();
+        }
+
+        void Decoder::validateDecoderConfiguration(void){
             if(!this->decoder_->isSet()){
                 ROS_ERROR("[Decoder] not configured yet");
                 throw std::runtime_error("[Decoder] not configured yet");
             }
-
-            return this->decoder_->classes();
         }
 
         bool Decoder::configure(void){
-            // get the plugin of the decoder
             if(ros::param::get("~plugin", this->plugin_) == false){
                 ROS_ERROR("[decoder] Missing 'plugin' parameter, which is a mandatory parameter");
                 return false;
             }
             
-            // Dynamically load the plugin and create the decoder class istance
-            try{ 
+            try{
                 this->decoder_ = this->loader_->createInstance(this->plugin_);
             } catch(pluginlib::PluginlibException& ex){
                 ROS_ERROR("[decoder] '%s' decoder failed to create: %s", this->plugin_.c_str(), ex.what());
                 return false;
             }
 
-            this->decodername_ = this->decoder_->name();
+            this->decodername_ = this->decoder_->getName();
 
-            // take the name of cfg decoder configuration
             std::string cfg_name;
             if(ros::param::get("~cfg_name", cfg_name) == false){
                 ROS_ERROR("[%s] Missing 'cfg_name' parameter, which is a mandatory parameter", this->decodername_.c_str());
                 return false;
             }
 
-            // Configure the decoder
             if(this->decoder_->configure(cfg_name) == false){
                 ROS_ERROR("[%s] Cannot configure the decoder", this->decodername_.c_str());
                 return false;
             }
 
-            // Subscribers and publisher
-            //this->sub_ = this->nh_.subscribe("/smr/features",1, &Decoder::on_received_data, this);
             this->pub_ = this->p_nh_.advertise<rosneuro_msgs::NeuroOutput>("/smr/neuroprediction", 1);
 
             ROS_INFO("[%s] Decoder correctly created and configured", this->decodername_.c_str());
@@ -83,8 +71,8 @@ namespace rosneuro{
             ros::Rate r(512);
 
             while(ros::ok()){
-                if(this->has_new_data_ == true){
-                    this->set_message(this->output_);
+                if(this->has_new_data_){
+                    this->setMessage(this->output_);
                     this->pub_.publish(this->msgoutput_);
                     this->has_new_data_ = false;
                 }
@@ -96,19 +84,16 @@ namespace rosneuro{
         }
 
         Eigen::VectorXf Decoder::apply(const Eigen::VectorXf& in){
-            Eigen::VectorXf out = this->decoder_->apply(in);
-            return out;
-
+            return this->decoder_->apply(in);
         }
 
         Eigen::VectorXf Decoder::getFeatures(const Eigen::MatrixXf& in){
-            Eigen::VectorXf features = this->decoder_->getFeatures(in);
-            return features;
+            return this->decoder_->getFeatures(in);
         }
 
         /*  TODO: define message from pwelch and read it
-        void Decoder::on_received_data(const rosneuro_msgs::NeuroOutput& msg){
-            this->input_ = this->vector_to_eigen(msg.softpredict.data);
+        void Decoder::onReceivedData(const rosneuro_msgs::NeuroOutput& msg){
+            this->input_ = this->vectorEigen(msg.softpredict.data);
             this-> output_ = this->decoder_->apply(this->input_);
             this->has_new_data_ = true;
 
@@ -124,31 +109,20 @@ namespace rosneuro{
         }
         */
 
-        void Decoder::set_message(const Eigen::VectorXf& data){
+        void Decoder::setMessage(const Eigen::VectorXf& data){
             this->msgoutput_.header.stamp = ros::Time::now();
-            this->msgoutput_.softpredict.data = this-> eigen_to_vector(data);
+            this->msgoutput_.softpredict.data = this-> eigenToVector(data);
         }
 
-        Eigen::VectorXf Decoder::vector_to_eigen(const std::vector<float>& in) {
-
-	        float* ptr_in;
-
-        	ptr_in = const_cast<float*>(in.data());
-
-        	Eigen::VectorXf out = Eigen::Map<Eigen::VectorXf>(ptr_in, in.size());
-
-        	return out;
+        Eigen::VectorXf Decoder::vectorToEigen(const std::vector<float>& in) {
+            float* ptr_in = const_cast<float*>(in.data());
+        	return Eigen::Map<Eigen::VectorXf>(ptr_in, in.size());
         }
 
-        std::vector<float> Decoder::eigen_to_vector(const Eigen::VectorXf& in) {
-
+        std::vector<float> Decoder::eigenToVector(const Eigen::VectorXf& in) {
         	std::vector<float> out(in.size());
-
         	Eigen::Map<Eigen::VectorXf>(out.data(), in.size()) = in;
-
         	return out;
-
         }
-
     }
 }
