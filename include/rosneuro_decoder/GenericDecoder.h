@@ -35,6 +35,9 @@ namespace rosneuro {
                 bool getParam(const std::string& name, std::vector<double>& value) const;
 
             protected:
+                std::vector<int> defineClasses(std::vector<uint32_t> class_lbs);
+                Eigen::VectorXf computeFeatures(const Eigen::MatrixXf& in, std::uint32_t n_features, std::vector<uint32_t> idchans,
+                                                                std::vector<std::vector<uint32_t>> freqs);
                 bool loadConfiguration(XmlRpc::XmlRpcValue& config);
                 std::map<std::string, XmlRpc::XmlRpcValue> params_;
                 bool loadEigen(const std::string centers_str, Eigen::Ref<Eigen::MatrixXf> out);
